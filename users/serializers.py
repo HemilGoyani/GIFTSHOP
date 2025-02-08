@@ -123,9 +123,10 @@ class GoogleSocialAuthSerializer(serializers.Serializer):
         user_id = user_data['sub']
         email = user_data['email']
         name = user_data['name']
-        provider = 'google'
+        provider = 'GOOGLE'
 
-        return register_social_user(provider=provider, user_id=user_id, email=email, name=name)
+        return register_social_user(
+            provider=provider, user_id=user_id, email=email, name=name)
 
 
 class ContactUsSerializer(serializers.Serializer):

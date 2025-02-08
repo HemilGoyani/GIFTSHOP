@@ -316,6 +316,7 @@ class PasswordResetConfirmView(GenericAPIView, PasswordValidatorMixin):
 
                 # Set the new password and save the user
                 user.set_password(new_password)
+                user.auth_provider=User.EMAIL
                 user.save()
 
                 return Response(

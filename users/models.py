@@ -36,12 +36,15 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    AUTH_PROVIDERS = {
-        "facebook": "facebook",
-        "google": "google",
-        "twitter": "twitter",
-        "email": "email",
-    }
+    FACEBOOK = "FACEBOOK"
+    GOOGLE = "GOOGLE"
+    EMAIL = "EMAIL"
+
+    AUTH_PROVIDERS = [
+        ("FACEBOOK", "FACEBOOK"),
+        ("GOOGLE", "GOOGLE"),
+        ("EMAIL", "EMAIL"),
+    ]
 
     GENDER_CHOICES = [
         ("M", "Male"),
@@ -71,12 +74,10 @@ class User(AbstractUser):
         blank=True,
         validators=[validate_file_size],
     )
-    auth_provider = models.CharField(
-        max_length=255, blank=False, null=False, default=AUTH_PROVIDERS.get("email")
-    )
+    auth_provider = models.CharField(max_length=25, choices=AUTH_PROVIDERS, null=False, blank=False, default=EMAIL)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["phone_number"]
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 

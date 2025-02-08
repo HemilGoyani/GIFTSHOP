@@ -10,16 +10,21 @@ def register_social_user(provider, user_id, email, name):
     if filtered_user_by_email:
 
         if provider == filtered_user_by_email.auth_provider:
+            try: 
+                registered_user = authenticate(
+                    email=email, password=os.environ.get('SOCIAL_SECRET'))
 
-            registered_user = authenticate(
-                email=email, password=os.environ.get('SOCIAL_SECRET'))
-
-            return {
-                'status': True,
-                'email': registered_user.email,
-                'tokens': registered_user.tokens(),
-                'message': 'Login successfully.'
-            }
+                return {
+                    'status': True,
+                    'email': registered_user.email,
+                    'tokens': registered_user.tokens(),
+                    'message': 'Login successfully.'
+                }
+            except Exception as e:
+                return {
+                    'status': False,
+                    'message': str(e)
+                }
 
         else:
             return {
@@ -28,18 +33,26 @@ def register_social_user(provider, user_id, email, name):
             }
    
     else:
-        user = {
-            'email': email,
-            'password': os.environ.get('SOCIAL_SECRET')}
-        user = User.objects.create_user(**user)
-        user.auth_provider = provider
-        user.save()
+        try: 
+            user = {
+                'email': email,
+                'password': os.environ.get('SOCIAL_SECRET')}
+            user = User.objects.create_user(**user)
+            user.auth_provider = provider
+            user.save()
 
-        new_user = authenticate(
-            email=email, password=os.environ.get('SOCIAL_SECRET'))
-        return {
-            'status': True,
-            'email': new_user.email,
-            'tokens': new_user.tokens(),
-            'message': 'Login successfully.'
-        }
+            new_user = authenticate(
+                email=email, password=os.environ.get('SOCIAL_SECRET'))
+            
+            return {
+                'status': True,
+                'email': new_user.email,
+                'tokens': new_user.tokens(),
+                'message': 'Login successfully.'
+            }
+        
+        except Exception as e:
+            return {
+                'status': False,
+                'message': str(e)
+            }
