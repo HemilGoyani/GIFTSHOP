@@ -212,7 +212,11 @@ class ProductAPIView(APIView):
                     {"status": False, "message": "Product not found."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-        products = Product.objects.all()
+        if request.user.is_site_admin:
+            products = Product.objects.all()
+        else:
+            products = Product.objects.filter(status=Product.IN_STOCK)
+
         if product_type:
             products = products.filter(product_type_id=product_type)
 
