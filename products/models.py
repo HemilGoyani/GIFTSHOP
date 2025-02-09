@@ -48,6 +48,7 @@ class Product(BaseModel):
         null=False,
         validators=[validate_file_size],
     )
+    description = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.code
