@@ -1,7 +1,6 @@
 from django.db import models
 from backend.models import BaseModel
-from backend.utils import get_product_image_upload_path
-from backend.utils import validate_file_size
+from backend.utils import get_product_image_upload_path, get_product_upload_path, validate_file_size
 from users.models import User
 from django.core.validators import FileExtensionValidator
 
@@ -56,6 +55,23 @@ class Product(BaseModel):
     class Meta:
         db_table = "product"
         verbose_name = "Product"
+
+
+class ProductImage(BaseModel):
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="images"
+    )
+    image = models.FileField(
+        upload_to=get_product_upload_path,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["jpg", "jpeg", "png", "gif", "mp4"]
+            )
+        ],
+    )
+
+    class Meta:
+        db_table = "product_image"
 
 
 class Wishlist(BaseModel):

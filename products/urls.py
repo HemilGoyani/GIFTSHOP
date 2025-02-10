@@ -5,6 +5,9 @@ from .views import (
     WishlistView,
     CartAPIView,
     BannerAPIView,
+    ProductImageUploadView,
+    ProductImageDeleteView
+
 )
 
 urlpatterns = [
@@ -32,4 +35,6 @@ urlpatterns = [
         BannerAPIView.as_view(),
         name="banner-retrieve-update-delete",
     ),
+    path('product-image/<int:product_id>/', ProductImageUploadView.as_view(), name='product-image-upload'),
+    path('product-image-delete/<int:image_id>/', ProductImageDeleteView.as_view(), name='product-image-delete'),
 ]

@@ -5,12 +5,24 @@ from .models import (
     Wishlist,
     CartItems,
     Banner,
+    ProductImage
 )
 from django.conf import settings
 from backend.utils import validate_file_size1
 from django.core.exceptions import ValidationError
 import os
+from backend.settings import NUMBER_OF_IMAGE_PER_PRODUCT
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = '__all__'
+
+    def validate_image(self, value):
+        allowed_extensions = ["jpg", "jpeg", "png", "gif", "mp4"]
+        if not any(value.name.endswith(ext) for ext in allowed_extensions):
+            raise serializers.ValidationError("Unsupported file format.")
+        return value
 
 class ProductTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,6 +46,7 @@ class ProductSerializer(serializers.ModelSerializer):
         write_only=True,
     )
     product_type_detail = ProductTypeSerializer(source="product_type", read_only=True)
+    images = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -48,6 +61,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 else f"{settings.MEDIA_URL}{obj.image.url}"
             )
         return None
+    
+    def get_images(self, obj):
+        grp_data = ProductImage.objects.filter(product=obj)
+        return ProductImageSerializer(
+            grp_data, many=True, read_only=True, context=self.context
+        ).data
     
     def to_representation(self, instance):
         # Get the default serialized data
@@ -72,6 +91,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class WishlistProductVariantSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -86,6 +106,12 @@ class WishlistProductVariantSerializer(serializers.ModelSerializer):
                 else f"{settings.MEDIA_URL}{obj.image.url}"
             )
         return None
+
+    def get_images(self, obj):
+        grp_data = ProductImage.objects.filter(product=obj)
+        return ProductImageSerializer(
+            grp_data, many=True, read_only=True, context=self.context
+        ).data
     
     def to_representation(self, instance):
         # Get the default serialized data

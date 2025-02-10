@@ -8,6 +8,7 @@ from .models import (
     ShoppingCart,
     CartItems,
     Banner,
+    ProductImage,
 )
 from .serializers import (
     ProductTypeSerializer,
@@ -15,6 +16,7 @@ from .serializers import (
     WishlistSerializer,
     CartSerializer,
     BannerSerializer,
+    ProductImageSerializer,
 )
 from backend.utils import superuser_required, serializers_error
 from django.shortcuts import get_object_or_404
@@ -326,6 +328,11 @@ class ProductAPIView(APIView):
     def delete(self, request, pk=None, *args, **kwargs):
         try:
             product = Product.objects.filter(pk=pk).first()
+            if not product:
+                return Response(
+                {"status": False, "message": "Product not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
             product.delete()
             return Response(
                 {"status": True, "message": "Product deleted successfully."},
@@ -683,4 +690,96 @@ class BannerAPIView(APIView):
         return Response(
             {"status": True, "message": "Banner deleted successfully"},
             status=status.HTTP_200_OK,
+        )
+
+
+class ProductImageUploadView(APIView):
+
+    @superuser_required
+    def post(self, request, product_id):
+        """Upload multiple images/videos for a specific ProductVariant"""
+        product = Product.objects.filter(id=product_id).first()
+        if not product:
+            return Response(
+                {"status": False, "message": "No product found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        files = request.FILES.getlist('images', [])
+        if not files:
+            return Response({"status": False, "message": "No images/videos provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        uploaded_files = []
+        for file in files:
+            data = {
+                "product": product.id,
+                "image": file
+            }
+            serializer = ProductImageSerializer(data=data, context={"request": request})
+            if serializer.is_valid():
+                serializer.save(created_by=self.request.user, updated_by=self.request.user)
+                uploaded_files.append(serializer.data)
+            else:
+                error_message = serializers_error(serializer)
+                return Response(
+                    {
+                        "status": False,
+                        "message": error_message,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        return Response({
+            "status": True,
+            "message": "Files uploaded successfully",
+            "data": uploaded_files
+        }, status=status.HTTP_201_CREATED)
+
+    def get(self, request, product_id):
+        """Retrieve all images/videos for a specific ProductVariant"""
+        product = Product.objects.filter(id=product_id).first()
+        if not product:
+            return Response(
+                {"status": False, "message": "No product found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        images = ProductImage.objects.filter(product=product)
+        serializer = ProductImageSerializer(images, many=True, context={"request": request})
+        return Response({
+                "status": True,
+                "message": "Files arrived successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+    @superuser_required
+    def delete(self, request, product_id):
+        """Delete an image/video for a specific ProductVariant"""
+        product_image = ProductImage.objects.filter(product_id=product_id)
+        for image in product_image:
+            image.image.delete(save=False)
+        product_image.delete()
+
+        return Response({"status": True, "message": "File deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ProductImageDeleteView(APIView):
+
+    @superuser_required
+    def delete(self, request, image_id):
+        """Delete an image/video for a specific ProductVariant"""
+        product_image = ProductImage.objects.filter(id=image_id).first()
+        if not product_image:
+            return Response(
+                {"status": False, "message": "No product image found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Delete the file from storage
+        product_image.image.delete(save=False)
+        
+        # Delete the database record
+        product_image.delete()
+
+        return Response(
+            {"status": True, "message": "File deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
         )
