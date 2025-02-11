@@ -5,14 +5,30 @@ from products.serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
 from users.models import User
 from users.serializers import UserListSerializer
-
+from django.conf import settings
 
 class OrderItemSerializerList(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
+    url = serializers.SerializerMethodField(read_only=True)
+    user_image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "quantity"]
+        fields = ["id", "product", "quantity", "url", "user_image"]
+    
+    def get_url(self, obj):
+        """Returns the URL of the product associated with the order item."""
+        return obj.url if obj.url else None
+
+    def get_user_image(self, obj):
+        if obj.user_image:
+            request = self.context.get("request")
+            return (
+                request.build_absolute_uri(obj.user_image.url)
+                if request
+                else f"{settings.MEDIA_URL}{obj.user_image.url}"
+            )
+        return None
 
 
 class OrderSerializerList(serializers.ModelSerializer):
@@ -168,3 +184,9 @@ class InvoiceListSerializer(serializers.ModelSerializer):
     def get_user(self, obj):
         user_data = User.objects.filter(id=obj.user.id)
         return UserListSerializer(user_data, read_only=True, context=self.context).data
+
+
+class OrderItemUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ["user_image", "url"]

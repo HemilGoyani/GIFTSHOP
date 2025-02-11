@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView 
+from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView, OrderItemUpdateAPIView
 
 urlpatterns = [
     # Product Type API
@@ -8,4 +8,5 @@ urlpatterns = [
     path('checkout-order/<int:order_id>/', CreateRazorpayOrder.as_view(), name='checkout_order'),
     path('verify-payment/', VerifyPayment.as_view(), name='verify_payment'),
     path('invoices/', InvoiceListView.as_view(), name='invoice-list'),
+    path("order-item/<int:pk>/", OrderItemUpdateAPIView.as_view(), name="order-item-update"),
 ]

@@ -19,7 +19,15 @@ def validate_file_size(value):
 def get_product_upload_path(instance, filename):
     return os.path.join(
         "product/images",
-        f"{instance.product.id}",  # Correctly referencing product_variant ID
+        f"{instance.product.id}",
+        filename
+    )
+
+
+def get_order_upload_path(instance, filename):
+    return os.path.join(
+        "orderitems/image",
+        f"{instance.id}",  # Correctly referencing product_variant ID
         filename  # Ensure the filename is included
     )
 

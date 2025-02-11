@@ -2,11 +2,12 @@ from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Order
+from .models import Order, OrderItem
 from .serializers import (
     OrderSerializer,
     OrderSerializerList,
     InvoiceListSerializer,
+    OrderItemUpdateSerializer
 )
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -277,3 +278,39 @@ class InvoiceListView(generics.ListAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class OrderItemUpdateAPIView(generics.UpdateAPIView):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk, *args, **kwargs):
+        # Get order item
+        order_item = OrderItem.objects.filter(id=pk).first()
+        if not order_item:
+            return Response(
+                {"status": False, "message": "Order not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if order_item.order.is_paid == False:
+            # Serialize and update
+            serializer = self.get_serializer(order_item, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save( updated_by=self.request.user)
+                return Response(
+                    {"status": True, "message": "Order item updated successfully.", "data": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            error_message = serializers_error(serializer)
+            return Response(
+                {
+                    "status": False,
+                    "message": error_message,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"status": False, "message": "Order not updated.", "data": serializer.data},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+       

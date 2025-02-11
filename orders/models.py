@@ -3,8 +3,9 @@ from backend.models import BaseModel
 from users.models import User
 from products.models import Product, ProductType
 from phonenumber_field.modelfields import PhoneNumberField
-from backend.utils import get_product_image_upload_path, validate_file_size
+from backend.utils import get_product_image_upload_path, validate_file_size, get_order_upload_path
 import uuid
+from django.core.validators import FileExtensionValidator
 
 class Order(BaseModel):
     """Stores the overall order for a user."""
@@ -81,6 +82,16 @@ class OrderItem(BaseModel):
         validators=[validate_file_size],
     )
     quantity = models.IntegerField(default=1)
+    url = models.URLField(max_length=1000, null=True, blank=True)
+    user_image = models.FileField(
+        upload_to=get_order_upload_path,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["jpg", "jpeg", "png"]
+            )
+        ],
+    ) 
+
 
     def __str__(self):
         return f"Order Item {self.code} (Order {self.order.id})"
