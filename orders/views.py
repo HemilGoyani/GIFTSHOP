@@ -1,5 +1,5 @@
 from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Order, OrderItem
@@ -7,12 +7,14 @@ from .serializers import (
     OrderSerializer,
     OrderSerializerList,
     InvoiceListSerializer,
-    OrderItemUpdateSerializer
+    OrderItemUpdateSerializer,
+    OrderStatusUpdateSerializer
 )
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 import razorpay
 from backend.utils import serializers_error
+from django.core.mail import send_mail
 
 
 class OrderAPIView(APIView):
@@ -313,4 +315,46 @@ class OrderItemUpdateAPIView(generics.UpdateAPIView):
             {"status": False, "message": "Order not updated.", "data": serializer.data},
             status=status.HTTP_400_BAD_REQUEST
         )
-       
+
+
+class OrderStatusUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, order_id):
+        """Update order status and send email"""
+        order = Order.objects.filter(id=order_id).first()
+        if order:
+            old_status = order.status
+            
+            serializer = OrderStatusUpdateSerializer(order, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                serializer.save()
+                
+                # Check if status changed and send email
+                if old_status != serializer.data['status']:
+                    self.send_status_update_email(order)
+                
+                return Response({"status": True, "message": "Order status updated successfully!", "data": serializer.data},
+                                status=status.HTTP_200_OK)
+            
+            error_message = serializers_error(serializer)
+            return Response(
+                {
+                    "status": False,
+                    "message": error_message,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def send_status_update_email(self, order):
+        subject = f"Your Order {order.order_number} is {order.status}"
+        message = f"Dear {order.user.email},\n\nYour order {order.order_number} status has been updated to {order.status}.\n\nThank you!"
+        recipient_email = order.email if order.email else order.user.email
+
+        send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,                
+                [recipient_email],
+            )

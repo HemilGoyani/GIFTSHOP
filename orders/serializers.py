@@ -190,3 +190,15 @@ class OrderItemUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ["user_image", "url"]
+
+
+class OrderStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+    def validate_status(self, value):
+        """Ensure status is valid."""
+        if value not in dict(Order.STATUS_CHOICES):
+            raise serializers.ValidationError("Invalid status value.")
+        return value
