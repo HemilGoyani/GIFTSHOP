@@ -169,9 +169,6 @@ class UserListView(APIView):
         )
 
 
-
-
-
 class PasswordValidatorMixin:
     def validate_password(self, password):
         """Validates password complexity."""
