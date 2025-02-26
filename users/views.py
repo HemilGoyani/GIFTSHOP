@@ -131,12 +131,45 @@ class UserLoginView(GenericAPIView):
             )
 
 
-class UserListView(generics.ListAPIView):
-    """API view to retrieve list of users, accessible only by admin users."""
+class UserListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    queryset = User.objects.all()
-    serializer_class = UserListSerializer
-    permission_classes = [permissions.IsAdminUser]
+    def get(self, request, pk=None):
+        user = request.user  # Get the logged-in user
+
+        if user.is_site_admin:  # If admin
+            if pk:
+                queryset = User.objects.filter(id=pk).first()
+                if not queryset:
+                    return Response(
+                        {"status": False, "message": "User not found.", "data": None},
+                        status=status.HTTP_404_NOT_FOUND,
+                    )
+                serializer = UserListSerializer(queryset, context={"request": request})
+            else:
+                queryset = User.objects.all()
+                serializer = UserListSerializer(queryset, many=True, context={"request": request})
+        else:
+            if pk and pk != user.id:
+                return Response(
+                    {"status": False, "message": "You do not have permission to view this user.", "data": None},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            queryset = User.objects.filter(id=user.id).first()
+            if not queryset:
+                return Response(
+                    {"status": False, "message": "User not found.", "data": None},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            serializer = UserListSerializer(queryset, context={"request": request})
+
+        return Response(
+            {"status": True, "message": "User data retrieved successfully.", "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
+
+
+
 
 
 class PasswordValidatorMixin:
