@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItem
+from .models import Order, OrderItem, OrderStatusHistory
 from products.models import Product, CartItems
 from products.serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
@@ -31,9 +31,18 @@ class OrderItemSerializerList(serializers.ModelSerializer):
         return None
 
 
+class OrderHistorySerializer(serializers.ModelSerializer):
+    changed_by = UserListSerializer(read_only=True)
+
+    class Meta:
+        model = OrderStatusHistory
+        fields = "__all__"
+
+
 class OrderSerializerList(serializers.ModelSerializer):
     items = OrderItemSerializerList(many=True)
     user = UserListSerializer(read_only=True)
+    history = OrderHistorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -57,6 +66,7 @@ class OrderSerializerList(serializers.ModelSerializer):
             "is_paid",
             "created_at",
             "updated_at",
+            "history"
         ]
         read_only_fields = (
             "user",
@@ -64,6 +74,7 @@ class OrderSerializerList(serializers.ModelSerializer):
             "is_deleted",
             "order_number",
             "is_paid",
+            "history"
         )
 
 

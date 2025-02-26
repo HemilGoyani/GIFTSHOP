@@ -10,20 +10,22 @@ from django.core.validators import FileExtensionValidator
 class Order(BaseModel):
     """Stores the overall order for a user."""
 
-    PENDING = 'PENDING'
+    PLACED = 'PLACED'
+    CONFIRMED = 'CONFIRMED'
+    PACKAGING = 'PACKAGING'
     SHIPPED = 'SHIPPED'
     DELIVERED = 'DELIVERED'
-    CANCELED = 'CANCELED'
-    
+
     STATUS_CHOICES = [
-        (PENDING, 'Pending'),
-        (SHIPPED, 'Shipped'), 
+        (PLACED, 'Order Placed'),
+        (CONFIRMED, 'Order Confirmed'),
+        (PACKAGING, 'Product Packaging'),
+        (SHIPPED, 'Product Shipped'),
         (DELIVERED, 'Delivered'),
-        (CANCELED, 'Canceled'),
     ]
 
     order_number = models.CharField(max_length=100, unique=True, null=False, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PLACED)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="order_user")
     total_price = models.FloatField(default=0.0)
     total_gst = models.FloatField(default=0.0)
@@ -48,6 +50,14 @@ class Order(BaseModel):
     address = models.CharField(max_length=200, null=True, blank=True)
     pincode = models.CharField(max_length=200, null=True, blank=True)
     landmark = models.CharField(max_length=200, null=True, blank=True)
+
+    # Order shiping data
+    product_name = models.CharField(max_length=255, null=True, blank=True)
+    order_date = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    courier_service = models.CharField(max_length=255, blank=True, null=True)
+    tracking_number = models.CharField(max_length=50, blank=True, null=True)
+    warehouse = models.CharField(max_length=255, blank=True, null=True)
+    estimated_delivery = models.DateField(blank=True, null=True)
     
     def save(self, *args, **kwargs):
         # Auto-generate order number if not already set
@@ -100,3 +110,13 @@ class OrderItem(BaseModel):
         db_table = "order_item"
         verbose_name = "Order Item"
         verbose_name_plural = "Order Items"
+
+
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="history")
+    status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.order.order_number} - {self.status} ({self.timestamp})"

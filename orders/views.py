@@ -2,20 +2,21 @@ from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Order, OrderItem
+from .models import Order, OrderItem, OrderStatusHistory
 from .serializers import (
     OrderSerializer,
     OrderSerializerList,
     InvoiceListSerializer,
     OrderItemUpdateSerializer,
-    OrderStatusUpdateSerializer
+    OrderStatusUpdateSerializer,
+    OrderHistorySerializer
 )
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 import razorpay
 from backend.utils import serializers_error
 from django.core.mail import send_mail
-
+from django.utils.timezone import now
 
 class OrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -244,6 +245,14 @@ class VerifyPayment(APIView):
             order.updated_by = self.request.user
             order.save()
 
+            # Log payment in order history
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=Order.PLACED,
+                timestamp=now(),
+                details=f"Payment received via Razorpay. Payment ID: {razorpay_payment_id}"
+            )
+
             return Response(
                 {"status": True, "message": "Payment Successfully."},
                 status=status.HTTP_200_OK,
@@ -321,31 +330,36 @@ class OrderStatusUpdateView(APIView):
     permission_classes = [IsAdminUser]
 
     def patch(self, request, order_id):
-        """Update order status and send email"""
-        order = Order.objects.filter(id=order_id).first()
-        if order:
-            old_status = order.status
-            
-            serializer = OrderStatusUpdateSerializer(order, data=request.data, partial=True)
-            
-            if serializer.is_valid():
-                serializer.save()
-                
-                # Check if status changed and send email
-                if old_status != serializer.data['status']:
-                    self.send_status_update_email(order)
-                
-                return Response({"status": True, "message": "Order status updated successfully!", "data": serializer.data},
-                                status=status.HTTP_200_OK)
-            
-            error_message = serializers_error(serializer)
-            return Response(
-                {
-                    "status": False,
-                    "message": error_message,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        """Update order status, log history, and send email"""
+        order = get_object_or_404(Order, id=order_id)
+        old_status = order.status
+        
+        serializer = OrderStatusUpdateSerializer(order, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            new_status = serializer.validated_data['status']
+            serializer.save()
+
+            # If status has changed, log it in history
+            if old_status != new_status:
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status=new_status,
+                    timestamp=now(),
+                    details=request.data.get('details', '')
+                )
+                self.send_status_update_email(order)
+
+            return Response({
+                "status": True,
+                "message": "Order status updated successfully!",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": False,
+            "message": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     def send_status_update_email(self, order):
         subject = f"Your Order {order.order_number} is {order.status}"
@@ -358,3 +372,39 @@ class OrderStatusUpdateView(APIView):
                 settings.DEFAULT_FROM_EMAIL,                
                 [recipient_email],
             )
+
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+
+class OrderStatusHistoryAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        order_id = kwargs.get("order_id")
+
+        if request.user.is_site_admin:
+            queryset = OrderStatusHistory.objects.all()
+        else:
+            queryset = OrderStatusHistory.objects.filter(order__user=request.user)
+
+        if order_id:
+            if request.user.is_site_admin:
+                queryset = queryset.filter(order_id=order_id)
+            else:
+                queryset = queryset.filter(order_id=order_id, order__user=request.user)
+
+        if not queryset.exists():
+            return Response(
+                {"status": False, "message": "No order status history found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OrderHistorySerializer(queryset, many=True)
+        return Response(
+            {"status": True, "data": serializer.data, "message": "Order status history retrieved successfully."},
+            status=status.HTTP_200_OK,
+        )
