@@ -48,6 +48,8 @@ class Product(BaseModel):
         validators=[validate_file_size],
     )
     description = models.TextField(null=True, blank=True)
+    is_url = models.BooleanField(null=False, blank=False)
+    is_image = models.BooleanField(null=False, blank=False)
 
     def __str__(self):
         return self.code

@@ -11,7 +11,8 @@ from django.conf import settings
 from backend.utils import validate_file_size1
 from django.core.exceptions import ValidationError
 import os
-from backend.settings import NUMBER_OF_IMAGE_PER_PRODUCT
+from django.utils.module_loading import import_string
+from django.db.models import Avg
 
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -47,6 +48,8 @@ class ProductSerializer(serializers.ModelSerializer):
     )
     product_type_detail = ProductTypeSerializer(source="product_type", read_only=True)
     images = serializers.SerializerMethodField(read_only=True)
+    reviews = serializers.SerializerMethodField(read_only=True)  
+    average_rating = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -68,6 +71,23 @@ class ProductSerializer(serializers.ModelSerializer):
             grp_data, many=True, read_only=True, context=self.context
         ).data
     
+    def get_reviews(self, obj):
+        """
+        Lazy import to prevent circular import issues.
+        """
+        ProductReviewSerializer = import_string("orders.serializers.ProductReviewSerializer")
+        ProductReview = import_string("orders.models.ProductReview")
+        reviews = ProductReview.objects.filter(product=obj)
+        return ProductReviewSerializer(reviews, many=True, context=self.context).data
+
+    def get_average_rating(self, obj):
+        """
+        Calculate the average rating of the product.
+        """
+        ProductReview = import_string("orders.models.ProductReview")
+        avg_rating = ProductReview.objects.filter(product=obj).aggregate(Avg("rating"))["rating__avg"]
+        return round(avg_rating, 1) if avg_rating is not None else 0
+
     def to_representation(self, instance):
         # Get the default serialized data
         data = super().to_representation(instance)

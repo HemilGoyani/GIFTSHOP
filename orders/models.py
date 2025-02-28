@@ -120,3 +120,28 @@ class OrderStatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.order.order_number} - {self.status} ({self.timestamp})"
+
+
+class ProductReview(BaseModel):
+    RATING_CHOICES = [
+        (1, '1 - Poor'),
+        (2, '2 - Fair'),
+        (3, '3 - Average'),
+        (4, '4 - Good'),
+        (5, '5 - Excellent'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_reviews')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='product_reviews')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='product_reviews', null=True, blank=True)
+    rating = models.IntegerField(choices=RATING_CHOICES)
+    review_text = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Review by {self.user.email} for {self.product.code} - Rating: {self.rating}"
+
+    class Meta:
+        db_table = "product_review"
+        verbose_name = "Product Review"
+        verbose_name_plural = "Product Reviews"
+        unique_together = ('user', 'product', 'order_item')

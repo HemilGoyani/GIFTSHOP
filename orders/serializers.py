@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItem, OrderStatusHistory
+from .models import Order, OrderItem, OrderStatusHistory, ProductReview
 from products.models import Product, CartItems
 from products.serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
@@ -213,3 +213,58 @@ class OrderStatusUpdateSerializer(serializers.ModelSerializer):
         if value not in dict(Order.STATUS_CHOICES):
             raise serializers.ValidationError("Invalid status value.")
         return value
+
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    order_item = serializers.PrimaryKeyRelatedField(queryset=OrderItem.objects.all())
+
+    class Meta:
+        model = ProductReview
+        fields = ['id', 'user', 'product', 'order_item', 'rating', 'review_text']
+        read_only_fields = ['id', 'user']
+
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+    
+    def validate(self, data):
+        """
+        Custom validation to ensure:
+        1. User has ordered the product in the specified order_item.
+        2. The order status is 'DELIVERED'.
+        3. The review is not already submitted for this order item by this user.
+        """
+        order_item = data['order_item']
+        product = data['product']
+        user = self.context['request'].user  # Get user from request context
+
+        if order_item.product != product:
+            raise serializers.ValidationError("The selected order item does not correspond to the selected product.")
+
+        order = order_item.order
+        if order.user != user:
+            raise serializers.ValidationError("You are not authorized to review products in this order.")
+
+        if order.status != Order.DELIVERED:
+            raise serializers.ValidationError("You can only review products after the order is delivered.")
+
+        # Check if a review already exists for this order item by this user
+        if ProductReview.objects.filter(user=user, order_item=order_item).exists():
+            raise serializers.ValidationError("You have already submitted a review for this product in this order.")
+
+        return data
+
+    def create(self, validated_data):
+        """Override create to automatically set the user from the request."""
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class UpdateProductReviewSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProductReview
+        fields = ['id', 'rating', 'review_text']

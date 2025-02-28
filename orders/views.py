@@ -2,14 +2,16 @@ from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Order, OrderItem, OrderStatusHistory
+from .models import Order, OrderItem, OrderStatusHistory, ProductReview
 from .serializers import (
     OrderSerializer,
     OrderSerializerList,
     InvoiceListSerializer,
     OrderItemUpdateSerializer,
     OrderStatusUpdateSerializer,
-    OrderHistorySerializer
+    OrderHistorySerializer,
+    ProductReviewSerializer,
+    UpdateProductReviewSerializer
 )
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -401,4 +403,111 @@ class OrderStatusHistoryAPIView(APIView):
         return Response(
             {"status": True, "data": serializer.data, "message": "Order status history retrieved successfully."},
             status=status.HTTP_200_OK,
+        )
+
+
+class CreateProductReviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """
+        Create a new product review for the authenticated user.
+        """
+        serializer = ProductReviewSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            order_item = serializer.validated_data['order_item']
+            product = serializer.validated_data['product']
+            user = request.user
+
+            if order_item.product != product:
+                return Response(
+                    {"status": False, "message": "The selected order item does not correspond to the selected product."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            order = order_item.order
+            if order.user != user:
+                return Response(
+                    {"status": False, "message": "You are not authorized to review products in this order."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if order.status != Order.DELIVERED:
+                return Response(
+                    {"status": False, "message": "You can only review products after the order is delivered."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if ProductReview.objects.filter(user=user, order_item=order_item).exists():
+                return Response(
+                    {"status": False, "message": "You have already submitted a review for this product in this order."},
+                    status=status.HTTP_409_CONFLICT
+                )
+            # --- End of Custom Validation Logic ---
+
+            serializer.save(user=user)
+            return Response(
+                {
+                    "status": True,
+                    "data": serializer.data,
+                    "message": "Product review created successfully.",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        error_message = serializers_error(serializer)
+        return Response(
+            {
+                "status": False,
+                "message": error_message,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    def patch(self, request, review_id, *args, **kwargs):
+        review = ProductReview.objects.filter(id=review_id).first()
+        if not review:
+            return Response(
+                {"status": False, "message": "Product review not found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if review.user != request.user:
+            return Response(
+                {"status": False, "message": "You can only update your own review."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = UpdateProductReviewSerializer(review, data=request.data, partial=True, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"status": True, "message": "Review updated successfully.", "data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        error_message = serializers_error(serializer)
+        return Response(
+            {
+                "status": False,
+                "message": error_message,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    def delete(self, request, review_id, *args, **kwargs):
+        review = ProductReview.objects.filter(id=review_id).first()
+        if not review:
+            return Response(
+                {"status": False, "message": "Product review not found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if review.user != request.user:
+            return Response(
+                {"status": False, "message": "You can only delete your own review."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        review.delete()
+        return Response(
+            {"status": True, "message": "Review deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT
         )
