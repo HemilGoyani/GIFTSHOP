@@ -77,20 +77,12 @@ class ProductTypeAPIView(APIView):
                     status=status.HTTP_200_OK,
                 )
             except Exception as e:
-                if "product_producttype_name_key" in str(e):
-                    return Response(
-                        {
-                            "status": False,
-                            "message": "ProductType name already exists.",
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
                 return Response(
                     {
                         "status": False,
-                        "message": "An error occurred while saving the product type.",
+                        "message": "ProductType name already exists.",
                     },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         error_message = serializers_error(serializer)
