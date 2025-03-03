@@ -6,6 +6,38 @@ from phonenumber_field.modelfields import PhoneNumberField
 from backend.utils import get_product_image_upload_path, validate_file_size, get_order_upload_path
 import uuid
 from django.core.validators import FileExtensionValidator
+from datetime import date
+
+
+class Coupon(BaseModel):
+    PERCENTAGE = 'PERCENTAGE'
+    FIXED = 'FIXED'
+
+    DISCOUNT_TYPES = [
+        (PERCENTAGE, 'Percentage'),
+        (FIXED, 'Fixed Amount'),
+    ]
+
+    code = models.CharField(max_length=50, unique=True)
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES, default=PERCENTAGE)
+    discount_value = models.FloatField()
+    max_discount = models.FloatField(null=True, blank=True)  # Maximum discount amount (optional)
+    min_order_amount = models.FloatField(default=0.0)  # Minimum order value requirede
+    valid_from = models.DateField()
+    valid_to = models.DateField()
+
+    def is_valid(self):
+        today = date.today()
+        return self.valid_from <= today <= self.valid_to and self.used_count < self.usage_limit
+
+    def __str__(self):
+        return f"{self.code} - {self.discount_type} ({self.discount_value})"
+
+    class Meta:
+        db_table = "coupon"
+        verbose_name = "Coupon"
+        verbose_name_plural = "Coupons"
+
 
 class Order(BaseModel):
     """Stores the overall order for a user."""
@@ -58,6 +90,9 @@ class Order(BaseModel):
     tracking_number = models.CharField(max_length=50, blank=True, null=True)
     warehouse = models.CharField(max_length=255, blank=True, null=True)
     estimated_delivery = models.DateField(blank=True, null=True)
+    coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True)
+    discount_amount = models.FloatField(default=0.0)
+    final_price = models.FloatField(default=0.0)
     
     def save(self, *args, **kwargs):
         # Auto-generate order number if not already set

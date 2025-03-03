@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView, OrderItemUpdateAPIView, OrderStatusUpdateView, OrderStatusHistoryAPIView, CreateProductReviewAPIView
+from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView, OrderItemUpdateAPIView, OrderStatusUpdateView, OrderStatusHistoryAPIView, CreateProductReviewAPIView, ApplyCouponView, CouponAPIView
 
 urlpatterns = [
     # Product Type API
@@ -14,4 +14,7 @@ urlpatterns = [
     path("order-history/<int:order_id>/", OrderStatusHistoryAPIView.as_view(), name="order-history-detail"),
     path('reviews/', CreateProductReviewAPIView.as_view(), name='create-review'),
     path('reviews/<int:review_id>/', CreateProductReviewAPIView.as_view(), name='update-delete-review'),
+    path('apply-coupon/<int:order_id>/', ApplyCouponView.as_view(), name='apply_coupon'),
+    path('coupons/', CouponAPIView.as_view(), name='coupon-list-create'),
+    path('coupons/<int:pk>/', CouponAPIView.as_view(), name='coupon-detail')
 ]
