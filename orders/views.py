@@ -2,7 +2,7 @@ from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Order, OrderItem, OrderStatusHistory, ProductReview
+from .models import Order, OrderItem, OrderStatusHistory, ProductReview, Coupon
 from .serializers import (
     OrderSerializer,
     OrderSerializerList,
@@ -11,14 +11,71 @@ from .serializers import (
     OrderStatusUpdateSerializer,
     OrderHistorySerializer,
     ProductReviewSerializer,
-    UpdateProductReviewSerializer
+    UpdateProductReviewSerializer,
+    CouponSerializer
 )
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 import razorpay
-from backend.utils import serializers_error
+from backend.utils import serializers_error, superuser_required
 from django.core.mail import send_mail
 from django.utils.timezone import now
+from datetime import date
+
+class ApplyCouponView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            # Get order by ID and ensure it's for the logged-in user
+            coupon_code = request.data.get('coupon_code')
+            order = Order.objects.filter(id=order_id, user=request.user).first()
+            if not order:
+                return Response({"status": False, "message": "Order data not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not coupon_code:
+                return Response({"status": False, "message": "Coupon code is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get coupon by code
+            coupon = Coupon.objects.filter(code=coupon_code).first()
+            if not coupon:
+                return Response({"status": False, "message": "Invalid coupon code"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if coupon is valid (date & usage)
+            today = date.today()
+            if not (coupon.valid_from <= today <= coupon.valid_to):
+                return Response({"status": False, "message": "Coupon is expired or usage limit exceeded"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Ensure order meets minimum value requirement
+            if order.total_price < coupon.min_order_amount:
+                return Response({"status": False, "message": "Order amount is less than the minimum required for this coupon"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Apply discount
+            if coupon.discount_type == Coupon.PERCENTAGE:
+                discount = (order.total_price * coupon.discount_value) / 100
+                if coupon.max_discount:
+                    discount = min(discount, coupon.max_discount)
+            else:
+                discount = coupon.discount_value
+
+            order.coupon = coupon
+            order.discount_amount = discount
+            order.final_price = max(0, order.total_price - discount)  # Ensure non-negative price
+            order.save()
+
+            serializer = OrderSerializerList(order, context={"request": request})
+            return Response({
+                "status": True,
+                "message": "Coupon applied successfully",
+                "discount_amount": order.discount_amount,
+                "final_price": order.final_price,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except Order.DoesNotExist:
+            return Response({"status": False, "message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class OrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -154,8 +211,8 @@ class CreateRazorpayOrder(APIView):
             client = razorpay.Client(
                 auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
             )
-            # GET THE ONLY TOKEN PAYMENT FOR 30% PERCENT
-            amount = order.total_price
+            # Gset the total order amount.
+            amount = order.total_price if not order.coupon else order.final_price
 
             # Create a Razorpay order
             razorpay_order_data = {
@@ -511,3 +568,49 @@ class CreateProductReviewAPIView(APIView):
             {"status": True, "message": "Review deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+class CouponAPIView(APIView):
+
+    def get(self, request, pk=None):
+        """Retrieve a specific coupon by ID or list all coupons"""
+        if pk:
+            try:
+                coupon = Coupon.objects.get(pk=pk)
+                serializer = CouponSerializer(coupon)
+                return Response({"status": True, "data": serializer.data, "message": "Coupon arrived successfully."}, status=status.HTTP_200_OK)
+            except Coupon.DoesNotExist:
+                return Response({"status": False, "message": "Coupon not found"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            coupons = Coupon.objects.all()
+            serializer = CouponSerializer(coupons, many=True)
+            return Response({"status": True, "data": serializer.data, "message": "Coupon arrived successfully."}, status=status.HTTP_200_OK)
+
+    @superuser_required
+    def post(self, request):
+        """Create a new coupon"""
+        serializer = CouponSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(
+                created_by=self.request.user,
+                updated_by=self.request.user,
+            )
+            return Response({"status": True, "message": "Coupon created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        error_message = serializers_error(serializer)
+        return Response(
+            {
+                "status": False,
+                "message": error_message,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    @superuser_required
+    def delete(self, request, pk):
+        """Delete a coupon"""
+        try:
+            coupon = Coupon.objects.get(pk=pk)
+            coupon.delete()
+            return Response({"status": True, "message": "Coupon deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except Coupon.DoesNotExist:
+            return Response({"status": False, "message": "Coupon not found"}, status=status.HTTP_404_NOT_FOUND)

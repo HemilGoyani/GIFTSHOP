@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItem, OrderStatusHistory, ProductReview
+from .models import Order, OrderItem, OrderStatusHistory, ProductReview, Coupon
 from products.models import Product, CartItems
 from products.serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
@@ -66,7 +66,10 @@ class OrderSerializerList(serializers.ModelSerializer):
             "is_paid",
             "created_at",
             "updated_at",
-            "history"
+            "history",
+            "coupon",
+            "discount_amount",
+            "final_price"
         ]
         read_only_fields = (
             "user",
@@ -74,7 +77,10 @@ class OrderSerializerList(serializers.ModelSerializer):
             "is_deleted",
             "order_number",
             "is_paid",
-            "history"
+            "history",
+            "coupon",
+            "discount_amount",
+            "final_price"
         )
 
 
@@ -114,6 +120,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "pincode",
             "landmark",
             "is_paid",
+            "coupon",
+            "discount_amount",
+            "final_price"
         ]
         read_only_fields = (
             "user",
@@ -121,6 +130,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "is_deleted",
             "order_number",
             "is_paid",
+            "coupon",
+            "discount_amount",
+            "final_price"
         )
 
     def create(self, validated_data):
@@ -268,3 +280,9 @@ class UpdateProductReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductReview
         fields = ['id', 'rating', 'review_text']
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = '__all__'
