@@ -45,6 +45,7 @@ pillow==11.1.0
 prompt_toolkit==3.0.50
 proto-plus==1.26.0
 protobuf==5.29.3
+psycopg2-binary==2.9.10
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 PyJWT==2.10.1
@@ -57,7 +58,6 @@ PyYAML==6.0.2
 razorpay==1.4.2
 requests==2.32.3
 rsa==4.9
-setuptools==75.8.0
 simplejson==3.19.3
 six==1.17.0
 sqlparse==0.5.3
