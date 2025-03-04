@@ -165,9 +165,9 @@ class OrderAPIView(APIView):
         """
         pk = kwargs.get("pk")
         if request.user.is_site_admin:
-            order = Order.objects.filter(id=pk).first()
+            order = Order.objects.filter(id=pk, is_paid=False).first()
         else:
-            order = Order.objects.filter(id=pk, user=request.user).first()
+            order = Order.objects.filter(id=pk, user=request.user, is_paid=False).first()
         if not order:
             return Response(
                 {"status": False, "message": "Order not found."},
