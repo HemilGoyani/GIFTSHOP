@@ -163,9 +163,11 @@ class OrderAPIView(APIView):
         """
         Delete an existing order for the authenticated user.
         """
-        order = Order.objects.filter(
-            id=kwargs.get("pk"), user=self.request.user
-        ).first()
+        pk = kwargs.get("pk")
+        if request.user.is_site_admin:
+            order = Order.objects.filter(id=pk).first()
+        else:
+            order = Order.objects.filter(id=pk, user=request.user).first()
         if not order:
             return Response(
                 {"status": False, "message": "Order not found."},
