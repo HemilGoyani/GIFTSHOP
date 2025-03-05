@@ -216,6 +216,9 @@ class CreateRazorpayOrder(APIView):
             # Gset the total order amount.
             amount = order.total_price if not order.coupon else order.final_price
 
+            # Add shipping charges
+            amount += 60
+                
             # Create a Razorpay order
             razorpay_order_data = {
                 "amount": int(amount * 100),  # amount in paise (INR)
