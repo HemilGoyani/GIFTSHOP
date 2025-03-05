@@ -1,0 +1,216 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-container {
+            max-width: 600px;
+            background: #fff;
+            margin: auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: #fde6de;
+            border-radius: 10px 10px 0 0;
+        }
+        .header img {
+            max-width: 100px;
+        }
+        .header h2 {
+            margin: 10px 0;
+            font-size: 22px;
+            color: #000;
+        }
+        .order-summary {
+            padding: 20px;
+            line-height: 25px;
+            text-align: center;
+        }
+        .order-summary h3 {
+            text-align: center;
+            margin: 20px 0px;
+        }
+        .order-item {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
+        }
+        .order-item img {
+            width: 80px;
+            height: 80px;
+            border-radius: 5px;
+        }
+        .item-details {
+            flex: 1;
+            padding-left: 15px;
+        }
+        .item-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .item-desc {
+            font-size: 14px;
+            color: #666;
+        }
+        .item-price {
+            font-size: 16px;
+            font-weight: bold;
+            color: #f0686a;
+        }
+        .total {
+            text-align: right;
+            padding: 20px;
+        }
+        .button {
+            display: block;
+            text-align: center;
+            background: black;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            margin: 20px auto;
+            width: 200px;
+            border-radius: 5px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+            padding: 20px;
+            background: #fde6de;
+            border-radius: 0 0 10px 10px;
+        }
+        .footer a {
+            color: #000;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .social-icons {
+            margin-top: 10px;
+        }
+        .social-icons img {
+            width: 30px;
+            margin: 5px;
+        }
+        @media (max-width: 600px) {
+            .order-item {
+                flex-direction: column;
+                align-items: start;
+            }
+            .order-item img {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="header">
+            <img src="{% static 'images/email_logo.jpg'%}" alt="Company Logo">
+            <h2>Thank you for your purchase!</h2>
+            <p>Hi {{order.name}}, we're getting your order ready to be {{status}}. We will notify you when it has been sent.</p>
+            <a href="https://rag-riya-arts-and-gelleries.vercel.app/" target="_blank" class="button">View More Order</a>
+        </div>
+
+        <!-- Shipping Address -->
+        <div class="order-summary">
+            <h3>Shipping address</h3>
+            {{order.address}}<br>
+            {{order.city}}, {{order.state}} {{order.pincode}}</p>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <h3>Order summary</h3>
+            
+            <!-- Product 1 -->
+            <div id="order-items">
+            </div>
+
+            <div class="total">
+                <p>Subtotal: <strong>{{sub_total}}</strong></p>
+                <p>Shipping Charge: <strong>{{shipping_changes}}</strong></p>
+                <p>Total: <strong>{{total_price}}</strong></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>If you have any questions, reply to this email or <a href="mailto:info.riyaartsandgalleries@gmail.com">contact us</a> at</p>
+            <p><strong>info.riyaartsandgalleries@gmail.com</strong></p>
+            <p>Surat, Gujarat</p>
+            
+            <div class="social-icons">
+                <a href="https://www.instagram.com/rag_gifts/"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook"></a>
+                <a href="https://www.instagram.com/rag_gifts/"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram"></a>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script>
+  // Sample order data
+  const products = [
+      {
+          name: "Blender Machine",
+          desc: "High-speed blender for smoothies.",
+          price: 65.95,
+          img: "https://via.placeholder.com/80"
+      },
+      {
+          name: "Coffee Maker",
+          desc: "Automatic drip coffee machine.",
+          price: 99.99,
+          img: "https://via.placeholder.com/80"
+      },
+      {
+          name: "Toaster",
+          desc: "2-slice toaster with browning control.",
+          price: 29.99,
+          img: "https://via.placeholder.com/80"
+      }
+  ];
+
+  const orderContainer = document.getElementById("order-items");
+  let subtotal = 0;
+  const shippingCost = 10.00;
+
+  products.forEach(product => {
+      subtotal += product.price;
+
+      const productHTML = `
+          <div class="order-item">
+              <img src="${product.img}" alt="${product.name}">
+              <div class="item-details">
+                  <div class="item-name">${product.name}</div>
+                  <div class="item-desc">${product.desc}</div>
+              </div>
+              <div class="item-price">$${product.price.toFixed(2)}</div>
+          </div>
+      `;
+
+      orderContainer.innerHTML += productHTML;
+  });
+
+  // Update total prices
+  document.getElementById("subtotal").innerText = `$${subtotal.toFixed(2)}`;
+  document.getElementById("total").innerText = `$${(subtotal + shippingCost).toFixed(2)}`;
+</script>
+</html>

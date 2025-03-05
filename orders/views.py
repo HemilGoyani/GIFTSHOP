@@ -21,6 +21,7 @@ from backend.utils import serializers_error, superuser_required
 from django.core.mail import send_mail
 from django.utils.timezone import now
 from datetime import date
+from django.template.loader import render_to_string
 
 class ApplyCouponView(APIView):
     permission_classes = [IsAuthenticated]
@@ -218,7 +219,7 @@ class CreateRazorpayOrder(APIView):
 
             # Add shipping charges
             amount += 60
-                
+
             # Create a Razorpay order
             razorpay_order_data = {
                 "amount": int(amount * 100),  # amount in paise (INR)
@@ -429,12 +430,23 @@ class OrderStatusUpdateView(APIView):
         subject = f"Your Order {order.order_number} is {order.status}"
         message = f"Dear {order.user.email},\n\nYour order {order.order_number} status has been updated to {order.status}.\n\nThank you!"
         recipient_email = order.email if order.email else order.user.email
+        email_template = render_to_string(
+            "email_template.html",
+            {
+                "order": order,
+                "status": order.status,
+                "sub_total": order.final_price if order.final_price else order.total_price,
+                "shipping_changes": 60,
+                "total_price": order.final_price + 60 if order.final_price else order.total_price + 60,
+            },
+        )
 
         send_mail(
                 subject,
                 message,
                 settings.DEFAULT_FROM_EMAIL,                
                 [recipient_email],
+                html_message=email_template,
             )
 
 
