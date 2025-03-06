@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "sdefhjsdgfdhgfddf5454hfg@2434456fghgvhh")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(strtobool(os.getenv("DEBUG", "False")))
 
-ALLOWED_HOSTS = ["api.riyaartsandgifts.in","*"]  # os.getenv("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = ["api.riyaartsandgifts.in"]  # os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 # Application definition
 INSTALLED_APPS = [
@@ -241,8 +241,3 @@ CORS_ALLOWED_ORIGINS = [
 FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN")
 CORS_ALLOW_ALL_ORIGINS = True
 NUMBER_OF_IMAGE_PER_PRODUCT = 5
-
-SECURE_SSL_REDIRECT = True  # Redirect HTTP to HTTPS
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CSRF_COOKIE_SECURE = True  # Secure cookies over HTTPS
-SESSION_COOKIE_SECURE = True  # Secure sessions over HTTPS
