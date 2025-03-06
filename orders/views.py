@@ -430,10 +430,12 @@ class OrderStatusUpdateView(APIView):
         subject = f"Your Order {order.order_number} is {order.status}"
         message = f"Dear {order.user.email},\n\nYour order {order.order_number} status has been updated to {order.status}.\n\nThank you!"
         recipient_email = order.email if order.email else order.user.email
+        order_items = OrderItem.objects.filter(order=order)
         email_template = render_to_string(
             "email_template.html",
             {
                 "order": order,
+                "order_items": order_items,
                 "status": order.status,
                 "sub_total": order.final_price if order.final_price else order.total_price,
                 "shipping_changes": 60,

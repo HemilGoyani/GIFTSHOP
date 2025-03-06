@@ -123,10 +123,10 @@
     <div class="email-container">
         <!-- Header Section -->
         <div class="header">
-            <img src="{% static 'images/email_logo.jpg'%}" alt="Company Logo">
+            <img src="https://api.riyaartsandgifts.in/static/images/email_logo.jpg" alt="Company Logo">
             <h2>Thank you for your purchase!</h2>
             <p>Hi {{order.name}}, we're getting your order ready to be {{status}}. We will notify you when it has been sent.</p>
-            <a href="https://rag-riya-arts-and-gelleries.vercel.app/" target="_blank" class="button">View More Order</a>
+            <a href="https://riyaartsandgifts.in/" target="_blank" class="button">View More Order</a>
         </div>
 
         <!-- Shipping Address -->
@@ -142,6 +142,15 @@
             
             <!-- Product 1 -->
             <div id="order-items">
+                {% for order_item in order_items %}
+                    <div class="order-item">
+                        <img src="https://api.riyaartsandgifts.in/media/product/images/{{order_item.product.image}}" alt="{{order_item.product.name}}">
+                        <div class="item-details">
+                            <div class="item-name">{{order_item.product.name}} -- Quantity: {{order_item.quantity}}</div>
+                        </div>
+                        <div class="item-price">{{order_item.price|mul:order_item.quantity}}</div>
+                    </div>
+                {% endfor %}
             </div>
 
             <div class="total">
@@ -165,52 +174,4 @@
     </div>
 
 </body>
-<script>
-  // Sample order data
-  const products = [
-      {
-          name: "Blender Machine",
-          desc: "High-speed blender for smoothies.",
-          price: 65.95,
-          img: "https://via.placeholder.com/80"
-      },
-      {
-          name: "Coffee Maker",
-          desc: "Automatic drip coffee machine.",
-          price: 99.99,
-          img: "https://via.placeholder.com/80"
-      },
-      {
-          name: "Toaster",
-          desc: "2-slice toaster with browning control.",
-          price: 29.99,
-          img: "https://via.placeholder.com/80"
-      }
-  ];
-
-  const orderContainer = document.getElementById("order-items");
-  let subtotal = 0;
-  const shippingCost = 10.00;
-
-  products.forEach(product => {
-      subtotal += product.price;
-
-      const productHTML = `
-          <div class="order-item">
-              <img src="${product.img}" alt="${product.name}">
-              <div class="item-details">
-                  <div class="item-name">${product.name}</div>
-                  <div class="item-desc">${product.desc}</div>
-              </div>
-              <div class="item-price">$${product.price.toFixed(2)}</div>
-          </div>
-      `;
-
-      orderContainer.innerHTML += productHTML;
-  });
-
-  // Update total prices
-  document.getElementById("subtotal").innerText = `$${subtotal.toFixed(2)}`;
-  document.getElementById("total").innerText = `$${(subtotal + shippingCost).toFixed(2)}`;
-</script>
 </html>
