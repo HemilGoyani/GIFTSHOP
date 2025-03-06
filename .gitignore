@@ -139,3 +139,4 @@ media/
 !**/migrations/__init__.py
 
 env
+static
