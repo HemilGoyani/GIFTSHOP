@@ -1,4 +1,5 @@
 {% load static %}
+{% load mathfilters %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -70,6 +71,7 @@
             font-size: 16px;
             font-weight: bold;
             color: #f0686a;
+            margin-left: 20px;
         }
         .total {
             text-align: right;
@@ -143,12 +145,13 @@
             <!-- Product 1 -->
             <div id="order-items">
                 {% for order_item in order_items %}
-                    <div class="order-item">
+                    <div class="order-item ">
                         <img src="https://api.riyaartsandgifts.in/media/product/images/{{order_item.product.image}}" alt="{{order_item.product.name}}">
                         <div class="item-details">
-                            <div class="item-name">{{order_item.product.name}} -- Quantity: {{order_item.quantity}}</div>
+                            <div class="item-name">{{order_item.product.name}}</div>
+                            <div class="item-desc">Quantity: {{order_item.quantity}}</div>
                         </div>
-                        <div class="item-price">{{order_item.price|mul:order_item.quantity}}</div>
+                        <div class="item-price">{{order_item.price|mul:order_item.quantity}} </div>
                     </div>
                 {% endfor %}
             </div>
