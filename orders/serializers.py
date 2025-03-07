@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from users.models import User
 from users.serializers import UserListSerializer
 from django.conf import settings
+from drf_extra_fields.fields import Base64ImageField
 
 class OrderItemSerializerList(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -90,10 +91,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
         write_only=True,
     )
     product_detail = ProductSerializer(source="product", read_only=True)
+    url = serializers.URLField(required=False)
+    user_image = Base64ImageField(required=False)
 
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "product_detail", "quantity"]
+        fields = ["id", "product", "product_detail", "quantity", "user_image", "url"]
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -156,7 +159,7 @@ class OrderSerializer(serializers.ModelSerializer):
             total_price += quantity * price
 
             # Create the OrderItem instance
-            OrderItem.objects.create(order=order, product=product, quantity=quantity, name=product.name, code=product.code, product_type=product.product_type, price=product.price, image=product.image)
+            OrderItem.objects.create(order=order, product=product, quantity=quantity, name=product.name, code=product.code, product_type=product.product_type, price=product.price, image=product.image, user_image=item_data.get('user_image', None), url=item_data.get('url', None))
             user_cart_data.append(product.id)
 
         # Update the total price in the order

@@ -27,7 +27,6 @@ def get_product_upload_path(instance, filename):
 def get_order_upload_path(instance, filename):
     return os.path.join(
         "orderitems/image",
-        f"{instance.id}",  # Correctly referencing product_variant ID
         filename  # Ensure the filename is included
     )
 
@@ -63,10 +62,13 @@ def validate_file_size1(value, max_size):
 
 
 def serializers_error(serializer):
-    if serializer:
-        for field, errors in serializer.errors.items():
-            field_name = field.replace('_', ' ').title()
-            error_message = errors[0].replace("This", "")
-            full_message = f"{field_name} {error_message}"
-            return full_message
-    return "Something went wrong!"
+    try:
+        if serializer:
+            for field, errors in serializer.errors.items():
+                field_name = field.replace('_', ' ').title()
+                error_message = errors[0].replace("This", "")
+                full_message = f"{field_name} {error_message}"
+                return full_message
+        return "Something went wrong!"
+    except Exception as e:
+        return "Something went wrong!"
