@@ -146,7 +146,7 @@
             <div id="order-items">
                 {% for order_item in order_items %}
                     <div class="order-item ">
-                        <img src="https://api.riyaartsandgifts.in/media/product/images/{{order_item.product.image}}" alt="{{order_item.product.name}}">
+                        <img src="https://api.riyaartsandgifts.in/media/{{order_item.product.image}}" alt="{{order_item.product.name}}">
                         <div class="item-details">
                             <div class="item-name">{{order_item.product.name}}</div>
                             <div class="item-desc">Quantity: {{order_item.quantity}}</div>
