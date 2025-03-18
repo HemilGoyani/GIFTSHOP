@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView, OrderItemUpdateAPIView, OrderStatusUpdateView, OrderStatusHistoryAPIView, CreateProductReviewAPIView, ApplyCouponView, CouponAPIView
+from .views import OrderAPIView, CreateRazorpayOrder, VerifyPayment, InvoiceListView, OrderItemUpdateAPIView, OrderStatusUpdateView, OrderStatusHistoryAPIView, CreateProductReviewAPIView, ApplyCouponView, CouponAPIView, CODPayment
 
 urlpatterns = [
     # Product Type API
     path('', OrderAPIView.as_view(), name='product_type_list_create'),
     path('<int:pk>/', OrderAPIView.as_view(), name='product_type_detail'),
     path('checkout-order/<int:order_id>/', CreateRazorpayOrder.as_view(), name='checkout_order'),
+    path('cod-checkout-order/<int:order_id>/', CODPayment.as_view(), name='cod-checkout_order'),
     path('verify-payment/', VerifyPayment.as_view(), name='verify_payment'),
     path('invoices/', InvoiceListView.as_view(), name='invoice-list'),
     path("order-item/<int:pk>/", OrderItemUpdateAPIView.as_view(), name="order-item-update"),

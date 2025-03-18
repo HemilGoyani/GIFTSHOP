@@ -47,6 +47,7 @@ class Order(BaseModel):
     PACKAGING = 'PACKAGING'
     SHIPPED = 'SHIPPED'
     DELIVERED = 'DELIVERED'
+    CANCELLED = 'CANCELLED'
 
     STATUS_CHOICES = [
         (PLACED, 'Order Placed'),
@@ -54,6 +55,12 @@ class Order(BaseModel):
         (PACKAGING, 'Product Packaging'),
         (SHIPPED, 'Product Shipped'),
         (DELIVERED, 'Delivered'),
+        (CANCELLED, 'Cancelled'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('ONLINE', 'Online Payment'),
+        ('COD', 'Cash on Delivery'),
     ]
 
     order_number = models.CharField(max_length=100, unique=True, null=False, blank=True)
@@ -63,10 +70,18 @@ class Order(BaseModel):
     total_gst = models.FloatField(default=0.0)
     is_deleted = models.BooleanField(default=False)
 
-    # Razorpayment Integration
+    # Payment related fields
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='ONLINE')
     razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
     is_paid = models.BooleanField(default=False)
+
+    # Shiprocket specific fields
+    cod_charges = models.FloatField(default=0.0)
+    shiprocket_order_id = models.CharField(max_length=100, null=True, blank=True)
+    shiprocket_shipment_id = models.CharField(max_length=100, null=True, blank=True)
+    awb_code = models.CharField(max_length=100, null=True, blank=True)
+    is_cod = models.BooleanField(default=False)
 
     # Add the Address details
     name = models.CharField(max_length=255, null=True, blank=True)

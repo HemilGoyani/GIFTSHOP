@@ -65,6 +65,11 @@ class OrderSerializerList(serializers.ModelSerializer):
             "pincode",
             "landmark",
             "is_paid",
+            "payment_method",
+            "cod_charges",
+            "shiprocket_order_id",
+            "shiprocket_shipment_id",
+            "awb_code",
             "created_at",
             "updated_at",
             "history",
@@ -81,7 +86,10 @@ class OrderSerializerList(serializers.ModelSerializer):
             "history",
             "coupon",
             "discount_amount",
-            "final_price"
+            "final_price",
+            "shiprocket_order_id",
+            "shiprocket_shipment_id",
+            "awb_code"
         )
 
 
@@ -123,6 +131,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "pincode",
             "landmark",
             "is_paid",
+            "payment_method",
+            "cod_charges",
+            "shiprocket_order_id",
+            "shiprocket_shipment_id",
+            "awb_code",
             "coupon",
             "discount_amount",
             "final_price"
@@ -135,8 +148,18 @@ class OrderSerializer(serializers.ModelSerializer):
             "is_paid",
             "coupon",
             "discount_amount",
-            "final_price"
+            "final_price",
+            "shiprocket_order_id",
+            "shiprocket_shipment_id",
+            "awb_code"
         )
+
+    def validate(self, data):
+        if data.get('payment_method') == 'COD':
+            # Set default COD charges
+            data['cod_charges'] = 60.0  # You can adjust this value as needed
+            
+        return data
 
     def create(self, validated_data):
         items_data = validated_data.pop("items")

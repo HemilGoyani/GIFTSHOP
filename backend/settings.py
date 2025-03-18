@@ -246,3 +246,8 @@ SECURE_SSL_REDIRECT = True  # Redirect HTTP to HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_SECURE = True  # Secure cookies over HTTPS
 SESSION_COOKIE_SECURE = True  # Secure sessions over HTTPS
+
+# Shiprocket Configuration
+SHIPROCKET_EMAIL = os.getenv("SHIPROCKET_EMAIL")
+SHIPROCKET_PASSWORD = os.getenv("SHIPROCKET_PASSWORD")
+SHIPROCKET_API_URL = 'https://apiv2.shiprocket.in/v1'

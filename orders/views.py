@@ -22,6 +22,7 @@ from django.core.mail import send_mail
 from django.utils.timezone import now
 from datetime import date
 from django.template.loader import render_to_string
+from .shiprocket import ShiprocketAPI
 
 class ApplyCouponView(APIView):
     permission_classes = [IsAuthenticated]
@@ -137,15 +138,47 @@ class OrderAPIView(APIView):
         # Pass the request context to the serializer
         serializer = OrderSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            serializer.save(
+            # Save the order
+            order = serializer.save(
                 user=self.request.user,
                 created_by=self.request.user,
                 updated_by=self.request.user,
             )
+
+            # If it's a COD order, mark it as not returnable and create Shiprocket order
+            if order.payment_method == 'COD':
+                order.is_returnable = False
+                order.is_paid = True  # For COD orders, mark as paid
+                order.save()
+
+                # Create Shiprocket order
+                shiprocket = ShiprocketAPI()
+                shiprocket_response = shiprocket.create_order(order)
+
+                if shiprocket_response:
+                    order.shiprocket_order_id = shiprocket_response.get('order_id')
+                    order.shiprocket_shipment_id = shiprocket_response.get('shipment_id')
+                    order.save()
+
+                    # Generate AWB
+                    if order.shiprocket_shipment_id:
+                        awb_response = shiprocket.generate_awb(order.shiprocket_shipment_id)
+                        if awb_response:
+                            order.awb_code = awb_response.get('awb_code')
+                            order.save()
+
+                # Create order history entry
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status=Order.PLACED,
+                    timestamp=now(),
+                    details="COD order placed successfully"
+                )
+
             return Response(
                 {
                     "status": True,
-                    "data": serializer.data,
+                    "data": OrderSerializerList(order, context={"request": request}).data,
                     "message": "Order created successfully.",
                 },
                 status=status.HTTP_201_CREATED,
@@ -194,6 +227,7 @@ class CreateRazorpayOrder(APIView):
         city = request.data.get("city")
         address = request.data.get("address")
         pincode = request.data.get("pincode")
+        payment_method = request.data.get("payment_method", "ONLINE")
         
         if not all([order_id, name, email, phone_number, state, city, address, pincode]):
             return Response(
@@ -208,7 +242,7 @@ class CreateRazorpayOrder(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if not order.is_paid:
+        if payment_method == 'ONLINE' and  order.is_cod == False and order.is_paid == False:
 
             # Razorpay client initialization
             client = razorpay.Client(
@@ -633,3 +667,83 @@ class CouponAPIView(APIView):
             return Response({"status": True, "message": "Coupon deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         except Coupon.DoesNotExist:
             return Response({"status": False, "message": "Coupon not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CODPayment(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        # Get order details from your system
+        name = request.data.get("name")
+        email = request.data.get("email")
+        phone_number = request.data.get("phone_number")
+        state = request.data.get("state")
+        city = request.data.get("city")
+        address = request.data.get("address")
+        pincode = request.data.get("pincode")
+        payment_method = request.data.get("payment_method", "COD")
+        
+        if not all([order_id, name, email, phone_number, state, city, address, pincode]):
+            return Response(
+                {"status": False, "message": "Please fill all details properly."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        order = Order.objects.filter(id=order_id).first()
+        if not order:
+            return Response(
+                {"status": False, "message": "Order not found."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # If it's a COD order, mark it as not returnable and create Shiprocket order
+        if payment_method == 'COD' and  order.is_cod == False and order.is_paid == False:
+            order.is_paid = True  # For COD orders, mark as paid
+
+            # Save address details
+            order.name = name
+            order.email = email
+            order.phone_number = phone_number
+            order.state = state
+            order.city = city
+            order.address = address
+            order.pincode = pincode
+            order.landmark = request.data.get("landmark")
+
+            # Save changes
+            order.created_by = self.request.user
+            order.updated_by = self.request.user
+            order.save()
+
+            # Create Shiprocket order
+            shiprocket = ShiprocketAPI()
+            shiprocket_response = shiprocket.create_order(order)
+
+            if shiprocket_response:
+                order.shiprocket_order_id = shiprocket_response.get('order_id')
+                order.shiprocket_shipment_id = shiprocket_response.get('shipment_id')
+                order.save()
+
+                # Generate AWB
+                if order.shiprocket_shipment_id:
+                    awb_response = shiprocket.generate_awb(order.shiprocket_shipment_id)
+                    if awb_response:
+                        order.awb_code = awb_response.get('awb_code')
+                        order.save()
+
+            # Create order history entry
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=Order.PLACED,
+                timestamp=now(),
+                details="COD order placed successfully"
+            )
+
+        return Response(
+            {
+                "status": True,
+                "data": OrderSerializerList(order, context={"request": request}).data,
+                "message": "Order created successfully.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
